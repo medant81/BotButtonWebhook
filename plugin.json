@@ -1,5 +1,5 @@
 {
-  "id": "bot-webhook-plugin",
+  "id": "bot-webhook-plugin-2",
   "name": "Bot Webhook",
   "description": "This plugin allows you to send a webhook when a bot receives a message.",
   "icon_path": "assets/starter-template-icon.svg",
