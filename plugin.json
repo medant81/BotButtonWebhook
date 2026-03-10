@@ -22,30 +22,6 @@
         "type": "text",
         "placeholder": "bot_id1: https://url1.com, bot_id2: https://url2.com",
         "default": ""
-      },
-      {
-        "key": "BotUserID",
-        "display_name": "Bot User ID",
-        "type": "text",
-        "help_text": "The user ID of the bot to listen for messages. TODO Del",
-        "placeholder": "Enter the bot user ID",
-        "default": ""
-      },
-      {
-        "key": "WebhookURL",
-        "display_name": "Webhook URL",
-        "type": "text",
-        "help_text": "The URL to send the HTTP request to when the bot receives a message. TODO Del",
-        "placeholder": "Enter the webhook URL",
-        "default": ""
-      },
-      {
-        "key": "BearerToken",
-        "display_name": "Bearer Token",
-        "type": "text",
-        "help_text": "The bearer token to use for the HTTP request.",
-        "placeholder": "Enter the Bearer token",
-        "default": ""
       }
     ]
   }
