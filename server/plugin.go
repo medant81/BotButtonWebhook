@@ -22,8 +22,9 @@ func (p *BotButtonWebhookPlugin) OnActivate() error {
 	// Регистрируем обработчик для всех action-запросов
 	p.router = mux.NewRouter()
 	p.router.HandleFunc("/actions/{action_id:[a-zA-Z0-9_-]+}", p.handleButtonClick).Methods("POST")
+	p.router.Handle("{anything:.*}", http.NotFoundHandler())
 
-	p.API.RegisterHTTPHandler("/", p)
+	//p.API.RegisterHTTPHandler("/", p)
 
 	p.loadConfiguration() // Загружаем webhook'и при активации
 	p.API.LogInfo("Button Handler plugin activated with custom routes")
