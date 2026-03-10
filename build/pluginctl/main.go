@@ -8,7 +8,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 const helpText = `
