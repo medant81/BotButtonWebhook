@@ -1,9 +1,9 @@
 {
-  "id": "bot-webhook-plugin-2",
-  "name": "Bot Webhook 2",
+  "id": "bot-button-webhook",
+  "name": "Bot button webhook",
   "description": "This plugin allows you to send a webhook when a bot receives a message.",
   "icon_path": "assets/starter-template-icon.svg",
-  "version": "0.3.0",
+  "version": "0.1.0",
   "min_server_version": "6.2.1",
   "server": {
     "executables": {
@@ -17,10 +17,17 @@
   "settings_schema": {
     "settings": [
       {
+        "key": "BotWebhooks",
+        "display_name": "Список ботов и webhook (формат: bot_id1: url1, bot_id2: url2)",
+        "type": "text",
+        "placeholder": "bot_id1: https://url1.com, bot_id2: https://url2.com",
+        "default": ""
+      },
+      {
         "key": "BotUserID",
         "display_name": "Bot User ID",
         "type": "text",
-        "help_text": "The user ID of the bot to listen for messages.",
+        "help_text": "The user ID of the bot to listen for messages. TODO Del",
         "placeholder": "Enter the bot user ID",
         "default": ""
       },
@@ -28,7 +35,7 @@
         "key": "WebhookURL",
         "display_name": "Webhook URL",
         "type": "text",
-        "help_text": "The URL to send the HTTP request to when the bot receives a message.",
+        "help_text": "The URL to send the HTTP request to when the bot receives a message. TODO Del",
         "placeholder": "Enter the webhook URL",
         "default": ""
       },
