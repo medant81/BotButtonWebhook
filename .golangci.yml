@@ -6,7 +6,7 @@ linters-settings:
   gofmt:
     simplify: true
   goimports:
-    local-prefixes: github.com/timkley/mattermost-plugin-bot-webhook
+    local-prefixes: github.com/medant81/BotButtonWebhook
   govet:
     check-shadowing: true
     enable-all: true
