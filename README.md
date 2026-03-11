@@ -1,23 +1,81 @@
-# Mattermost Bot Webhook
+## Запуск локального сервера обработки вебхуков
+lsof -ti :9090 | xargs kill -9 2>/dev/null && go run cmd/webhook-server/main.go
 
-This plugin provides the possibility to configure a webhook to call when a specific Bot ID is messaged.  
-The webhook contains the post made to the bot.  
-Other messages or messages by the bot itself are ignored.
+## Перезагрузка плагина
 
-## Installation
+```bash
+# Получить токен сессии
+TOKEN=$(curl -si 'http://localhost:8065/api/v4/users/login' \
+  --header 'Content-Type: application/json' \
+  --data '{"login_id":"test","password":"12345678"}' \
+  | grep -i "^token:" | awk '{print $2}' | tr -d '\r')
 
-Download the most current release from the [Releases](https://github.com/timkley/mattermost-plugin-bot-webhook/releases) page.
+# Отключить плагин
+curl -s -X POST "http://localhost:8065/api/v4/plugins/bot-button-webhook/disable" \
+  --header "Authorization: Bearer $TOKEN"
 
-> [!IMPORTANT]
-> If the upload fails make sure that Mattermost is configured to handle large file uploads and your webserver also allows uploading files of the same size.
-> 
-> **Mattermost:** Search the System Console for "Maximum File Size".  
-> **Nginx:** The server config can be found at `/etc/nginx/conf.d/mattermost.conf`. Edit the setting `client_max_body_size` under `location /`.
+# Включить плагин
+curl -s -X POST "http://localhost:8065/api/v4/plugins/bot-button-webhook/enable" \
+  --header "Authorization: Bearer $TOKEN"
+```
 
-## Manual Build / Installation
+## Отправка сообщения с кнопками через API
 
-Clone this repository and build the plugin using `make dist`. The bundled plugin can be found in the `dist` folder.
+```bash
+curl --location 'http://localhost:8065/api/v4/posts' \
+  --header 'Authorization: Bearer xssyp91zsirzikdxfhmot6ao1c' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "channel_id": "7omrxkaoq7dqtfdpyjuj36p1or",
+    "message": "Требуется подтверждение",
+    "props": {
+      "attachments": [
+        {
+          "pretext": "Поступил новый запрос на согласование.",
+          "text": "Пожалуйста, выберите действие:",
+          "actions": [
+            {
+              "id": "approve",
+              "name": "✅ Одобрить",
+              "type": "button",
+              "integration": {
+                "url": "http://localhost:8065/plugins/bot-button-webhook/actions/approve",
+                "context": {
+                  "action": "approve"
+                }
+              }
+            },
+            {
+              "id": "reject",
+              "name": "❌ Отклонить",
+              "type": "button",
+              "integration": {
+                "url": "http://localhost:8065/plugins/bot-button-webhook/actions/reject",
+                "context": {
+                  "action": "reject"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }'
+```
 
-## Configuration
+## Загрузка новой версии плагина после пересборки
 
-After successful installation you may configure the Bot Webhook from the System Console → Plugins → Bot Webhook.
+```bash
+TOKEN=$(curl -si 'http://localhost:8065/api/v4/users/login' \
+  --header 'Content-Type: application/json' \
+  --data '{"login_id":"test","password":"12345678"}' \
+  | grep -i "^token:" | awk '{print $2}' | tr -d '\r')
+
+make dist && \
+curl -s -X POST 'http://localhost:8065/api/v4/plugins' \
+  --header "Authorization: Bearer $TOKEN" \
+  -F 'plugin=@dist/bot-button-webhook-0.1.0.tar.gz' \
+  -F 'force=true' && \
+curl -s -X POST "http://localhost:8065/api/v4/plugins/bot-button-webhook/enable" \
+  --header "Authorization: Bearer $TOKEN"
+```

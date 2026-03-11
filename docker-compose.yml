@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mmuser
+      POSTGRES_PASSWORD: mostest
+      POSTGRES_DB: mattermost
+    volumes:
+      - ./volumes/db:/var/lib/postgresql/data
+    networks:
+      - mm-net
+
+  app:
+    image: mattermost/mattermost-team-edition:latest
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8065:8065"
+    environment:
+      # Минимальные настройки (можно потом поменять в System Console)
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: postgres://mmuser:mostest@db:5432/mattermost?sslmode=disable&connect_timeout=10
+      MM_SERVICESETTINGS_SITEURL: http://localhost:8065
+      MM_SERVICESETTINGS_LISTENADDRESS: ":8065"
+      MM_PLUGINSETTINGS_ENABLE: "true"
+      MM_PLUGINSETTINGS_ENABLEUPLOADS: "true"
+      MM_FILESETTINGS_ENABLEPUBLICLINK: "true"
+    volumes:
+      - ./volumes/app/mattermost/config:/mattermost/config:rw
+      - ./volumes/app/mattermost/data:/mattermost/data:rw
+      - ./volumes/app/mattermost/logs:/mattermost/logs:rw
+      - ./volumes/app/mattermost/plugins:/mattermost/plugins:rw
+      - ./volumes/app/mattermost/client/plugins:/mattermost/client/plugins:rw
+    networks:
+      - mm-net
+
+networks:
+  mm-net:

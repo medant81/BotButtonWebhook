@@ -89,22 +89,28 @@ func (p *BotButtonWebhookPlugin) OnActivate() error {
 	return nil
 }*/
 
-// ServeHTTP — обязательный метод, который Mattermost вызывает для всех запросов к плагину
-func (p *BotButtonWebhookPlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	p.API.LogInfo("meda-plugin: Received request", "path", r.URL.Path, "method", r.Method)
+// ServeHTTP вызывается Mattermost для всех HTTP-запросов к плагину (/plugins/bot-button-webhook/...).
+// Сигнатура с *plugin.Context обязательна — без неё Mattermost не регистрирует метод как хук.
+func (p *BotButtonWebhookPlugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	p.API.LogInfo("meda-plugin: === ServeHTTP called ===",
 		"path", r.URL.Path,
 		"method", r.Method,
-		"remote_addr", r.RemoteAddr,
-		"user_agent", r.UserAgent())
+		"remote_addr", r.RemoteAddr)
 
 	if p.router == nil {
-		p.API.LogError("Router is nil!")
+		p.API.LogError("meda-plugin: router is nil")
 		http.Error(w, "Plugin not properly initialized", http.StatusInternalServerError)
 		return
 	}
 
 	p.router.ServeHTTP(w, r)
+}
+
+// OnConfigurationChange вызывается Mattermost автоматически при каждом сохранении
+// настроек плагина в System Console. Перезагружает map ботов без рестарта плагина.
+func (p *BotButtonWebhookPlugin) OnConfigurationChange() error {
+	p.loadConfiguration()
+	return nil
 }
 
 // Загрузка конфигурации (список ботов и их webhook)
@@ -261,10 +267,18 @@ func (p *BotButtonWebhookPlugin) handleButtonClick(w http.ResponseWriter, r *htt
 	}
 	defer resp.Body.Close()
 
-	// Важно: для interactive message actions нужно вернуть специальный ответ
-	// чтобы Mattermost правильно обработал действие
+	// Обновляем оригинальный пост: убираем кнопки и показываем кто и что выбрал.
+	// Это надёжнее ephemeral_text — визуально меняет пост для всех участников.
 	response := map[string]interface{}{
-		"ephemeral_text": "Button click processed",
+		"update": map[string]interface{}{
+			"props": map[string]interface{}{
+				"attachments": []map[string]interface{}{
+					{
+						"text": "✅ Действие выполнено: *" + actionId + "* — пользователь @" + payload.UserName,
+					},
+				},
+			},
+		},
 	}
 
 	w.Header().Set("Content-Type", "application/json")
