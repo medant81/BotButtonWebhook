@@ -20,11 +20,22 @@ type BotButtonWebhookPlugin struct {
 
 func (p *BotButtonWebhookPlugin) OnActivate() error {
 	// Регистрируем обработчик для всех action-запросов
+	p.API.LogInfo("meda-plugin: === OnActivate called ===")
+
 	p.router = mux.NewRouter()
-	p.router.HandleFunc("/actions/{action_id:[a-zA-Z0-9_-]+}", p.handleButtonClick).Methods("POST")
+	//p.router.HandleFunc("/actions/{action_id:[a-zA-Z0-9_-]+}", p.handleButtonClick).Methods("POST")
+	p.router.HandleFunc("/actions/{action_id}", p.handleButtonClick).Methods("POST")
+	p.router.HandleFunc("/actions", p.handleButtonClick).Methods("POST")
+	p.router.HandleFunc("/actions/message", p.handleButtonClick).Methods("POST")
 
 	// Важно: обрабатываем также запросы без action_id для диагностики
-	p.router.HandleFunc("/actions", p.handleButtonClick).Methods("POST")
+	//p.router.HandleFunc("/actions", p.handleButtonClick).Methods("POST")
+
+	p.router.HandleFunc("", func(w http.ResponseWriter, r *http.Request) {
+		p.API.LogInfo("meda-plugin:Root endpoint called", "path", r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Bot Button Webhook Plugin Root"))
+	}).Methods("GET")
 
 	// Обработчик для проверки работоспособности
 	p.router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
@@ -32,12 +43,24 @@ func (p *BotButtonWebhookPlugin) OnActivate() error {
 		w.Write([]byte("pong"))
 	}).Methods("GET")
 
-	p.router.Handle("{anything:.*}", http.NotFoundHandler())
+	//p.router.Handle("{anything:.*}", http.NotFoundHandler())
+
+	// Обработчик для любых других путей (для отладки)
+	p.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p.API.LogInfo("meda-plugin:Catch-all handler",
+			"path", r.URL.Path,
+			"method", r.Method,
+			"query", r.URL.RawQuery)
+		http.NotFound(w, r)
+	})
 
 	//p.API.RegisterHTTPHandler("/", p)
 
 	p.loadConfiguration() // Загружаем webhook'и при активации
-	p.API.LogInfo("meda-plugin: Button Handler plugin activated with custom routes")
+	p.API.LogInfo("meda-plugin: Bot Button Webhook plugin activated successfully",
+		"routes", "registered",
+		"plugin_id", "bot-button-webhook")
+
 	return nil
 }
 
@@ -58,6 +81,18 @@ func (p *BotButtonWebhookPlugin) OnActivate() error {
 // ServeHTTP — обязательный метод, который Mattermost вызывает для всех запросов к плагину
 func (p *BotButtonWebhookPlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p.API.LogInfo("meda-plugin: Received request", "path", r.URL.Path, "method", r.Method)
+	p.API.LogInfo("meda-plugin: === ServeHTTP called ===",
+		"path", r.URL.Path,
+		"method", r.Method,
+		"remote_addr", r.RemoteAddr,
+		"user_agent", r.UserAgent())
+
+	if p.router == nil {
+		p.API.LogError("Router is nil!")
+		http.Error(w, "Plugin not properly initialized", http.StatusInternalServerError)
+		return
+	}
+
 	p.router.ServeHTTP(w, r)
 }
 
@@ -118,6 +153,12 @@ type InteractiveMessagePayload struct {
 }
 
 func (p *BotButtonWebhookPlugin) handleButtonClick(w http.ResponseWriter, r *http.Request) {
+
+	p.API.LogInfo("meda-plugin: === handleButtonClick called ===",
+		"path", r.URL.Path,
+		"method", r.Method,
+		"vars", mux.Vars(r))
+
 	// Читаем тело запроса
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
