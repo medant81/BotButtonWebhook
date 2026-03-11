@@ -56,6 +56,17 @@ func (p *BotButtonWebhookPlugin) OnActivate() error {
 
 	//p.API.RegisterHTTPHandler("/", p)
 
+	// Добавим middleware для логирования всех запросов
+	p.router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			p.API.LogInfo("meda-plugin: Router middleware",
+				"path", r.URL.Path,
+				"method", r.Method,
+				"content-type", r.Header.Get("Content-Type"))
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	p.loadConfiguration() // Загружаем webhook'и при активации
 	p.API.LogInfo("meda-plugin: Bot Button Webhook plugin activated successfully",
 		"routes", "registered",
