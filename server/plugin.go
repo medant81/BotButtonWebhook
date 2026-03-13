@@ -19,6 +19,8 @@ type BotButtonWebhookPlugin struct {
 }
 
 func (p *BotButtonWebhookPlugin) OnActivate() error {
+
+	// TODO Для прода убрать лишние регистрации, влогах убрать тег meda-plugin
 	// Регистрируем обработчик для всех action-запросов
 	p.API.LogInfo("meda-plugin: === OnActivate called ===")
 
@@ -43,8 +45,6 @@ func (p *BotButtonWebhookPlugin) OnActivate() error {
 		w.Write([]byte("pong"))
 	}).Methods("GET")
 
-	//p.router.Handle("{anything:.*}", http.NotFoundHandler())
-
 	// Обработчик для любых других путей (для отладки)
 	p.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p.API.LogInfo("meda-plugin:Catch-all handler",
@@ -53,8 +53,6 @@ func (p *BotButtonWebhookPlugin) OnActivate() error {
 			"query", r.URL.RawQuery)
 		http.NotFound(w, r)
 	})
-
-	//p.API.RegisterHTTPHandler("/", p)
 
 	// Добавим middleware для логирования всех запросов
 	p.router.Use(func(next http.Handler) http.Handler {
@@ -74,20 +72,6 @@ func (p *BotButtonWebhookPlugin) OnActivate() error {
 
 	return nil
 }
-
-// Старый вариант функции
-/*func (p *BotButtonWebhookPlugin) OnActivate() error {
-	// Регистрируем обработчик для всех action-запросов
-	p.router = mux.NewRouter()
-	p.router.HandleFunc("/actions/{action_id:[a-zA-Z0-9_-]+}", p.handleButtonClick).Methods("POST")
-	p.router.Handle("{anything:.*}", http.NotFoundHandler())
-
-	//p.API.RegisterHTTPHandler("/", p)
-
-	p.loadConfiguration() // Загружаем webhook'и при активации
-	p.API.LogInfo("Button Handler plugin activated with custom routes")
-	return nil
-}*/
 
 // ServeHTTP вызывается Mattermost для всех HTTP-запросов к плагину (/plugins/bot-button-webhook/...).
 // Сигнатура с *plugin.Context обязательна — без неё Mattermost не регистрирует метод как хук.
@@ -285,74 +269,6 @@ func (p *BotButtonWebhookPlugin) handleButtonClick(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
-
-// Главная функция — обработчик нажатия на кнопку
-/*func (p *BotButtonWebhookPlugin) handleButtonClick(w http.ResponseWriter, r *http.Request) {
-	// 1. Читаем тело запроса от Mattermost
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		p.API.LogError("meda-plugin: Failed to read request body", "err", err.Error())
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
-
-	// 2. Парсим данные о клике (Mattermost отправляет JSON)
-	var payload struct {
-		UserID    string          `json:"user_id"`
-		ChannelID string          `json:"channel_id"`
-		PostID    string          `json:"post_id"`
-		Context   json.RawMessage `json:"context"`
-		TriggerID string          `json:"trigger_id,omitempty"`
-	}
-	if err := json.Unmarshal(body, &payload); err != nil {
-		p.API.LogError("Invalid JSON in button click", "err", err.Error())
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	// 3. Получаем ID поста и самого поста, чтобы узнать, от какого бота он
-	post, appErr := p.API.GetPost(payload.PostID)
-	if appErr != nil {
-		p.API.LogError("Failed to get post for button click", "err", appErr.Error())
-		http.Error(w, "Post not found", http.StatusNotFound)
-		return
-	}
-
-	// 4. Определяем, от какого бота сообщение (UserId поста = ID бота)
-	botID := post.UserId
-	webhookURL, exists := p.botWebhooks[botID]
-	if !exists {
-		p.API.LogWarn("No webhook configured for bot", "bot_id", botID)
-		http.Error(w, "No handler for this bot", http.StatusNotFound)
-		return
-	}
-
-	// 5. Формируем данные для отправки (можно добавить/убрать поля)
-	dataToSend := map[string]interface{}{
-		"user_id":    payload.UserID,
-		"channel_id": payload.ChannelID,
-		"post_id":    payload.PostID,
-		"action_id":  mux.Vars(r)["action_id"],
-		"context":    payload.Context,
-		"trigger_id": payload.TriggerID,
-		"bot_id":     botID,
-	}
-
-	jsonData, _ := json.Marshal(dataToSend)
-
-	// 6. Отправляем POST на webhook бота
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		p.API.LogError("Failed to send to webhook", "url", webhookURL, "err", err.Error())
-		http.Error(w, "Webhook error", http.StatusBadGateway)
-		return
-	}
-	defer resp.Body.Close()
-
-	// 7. Обязательно возвращаем 200 OK клиенту Mattermost
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
-}*/
 
 func main() {
 	plugin.ClientMain(&BotButtonWebhookPlugin{})
