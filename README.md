@@ -1,3 +1,40 @@
+## Mattermost Bot Button Webhook
+
+Этот плагин позволяет настроить webhook, который будет вызываться:
+
+- когда **пользователь пишет сообщение боту** (по User ID бота) в Mattermost
+- когда пользователь **нажимает интерактивную кнопку** в сообщении (см. обработчик `handleButtonClick`)
+
+В webhook отправляется JSON полезной нагрузки (для сообщений боту — `model.Post`). Остальные сообщения, а также сообщения, отправленные самим ботом, игнорируются.
+
+## Установка
+
+Соберите плагин командой `make dist` и загрузите архив из папки `dist` в Mattermost (System Console → Plugins → Plugin Management).
+
+> [!IMPORTANT]
+> Если загрузка плагина не проходит, проверьте лимиты на размер загружаемых файлов:
+>
+> - **Mattermost**: параметр *Maximum File Size* в System Console
+> - **Nginx**: `client_max_body_size` в конфиге (обычно `/etc/nginx/conf.d/mattermost.conf`)
+
+## Ручная сборка
+
+Клонируйте репозиторий и выполните `make dist`. Готовый архив будет в `dist/`.
+
+## Настройка
+
+После установки настройте параметр `BotWebhooks` в System Console → Plugins → Bot button webhook.
+
+Формат значения:
+
+`bot_id1: https://url1.com, bot_id2: https://url2.com`
+
+Где:
+
+- `bot_id` — User ID бота в Mattermost
+- `url` — endpoint вашего webhook
+- пары разделяются **запятой**
+
 ## Запуск локального сервера обработки вебхуков
 lsof -ti :9090 | xargs kill -9 2>/dev/null && go run cmd/webhook-server/main.go
 

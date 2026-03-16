@@ -1,6 +1,14 @@
 GO ?= $(shell command -v go 2> /dev/null)
 NPM ?= $(shell command -v npm 2> /dev/null)
 CURL ?= $(shell command -v curl 2> /dev/null)
+
+# On Windows, command -v / make can yield an unquoted path like "C:\Program Files\...".
+# Prefer resolving tools via PATH to avoid whitespace issues.
+ifeq ($(OS),Windows_NT)
+	GO := go
+	NPM := npm
+	CURL := curl
+endif
 MM_DEBUG ?=
 MANIFEST_FILE ?= plugin.json
 GOPATH ?= $(shell go env GOPATH)

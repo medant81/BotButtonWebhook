@@ -73,6 +73,77 @@ func (p *BotButtonWebhookPlugin) OnActivate() error {
 	return nil
 }
 
+// MessageHasBeenPosted вызывается Mattermost после создания нового поста.
+// Логика перенесена из mattermost-plugin-bot-webhook-2-main, но используется SDK из "server/public".
+func (p *BotButtonWebhookPlugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
+	// Гарантируем, что конфигурация загружена
+	if p.botWebhooks == nil {
+		p.loadConfiguration()
+	}
+
+	if len(p.botWebhooks) == 0 {
+		return
+	}
+
+	channel, appErr := p.API.GetChannel(post.ChannelId)
+	if appErr != nil {
+		p.API.LogError("meda-plugin: Failed to get channel", "error", appErr.Error())
+		return
+	}
+
+	// Игнорируем сообщения, отправленные самим ботом
+	if _, isBot := p.botWebhooks[post.UserId]; isBot {
+		return
+	}
+
+	// Эвристика: в DM-канале имя канала содержит user_id участника.
+	// Определяем, какому боту написали, по списку bot_id из настроек.
+	var botID string
+	var webhookURL string
+	for configuredBotID, url := range p.botWebhooks {
+		if configuredBotID == "" || url == "" {
+			continue
+		}
+		if strings.Contains(channel.Name, configuredBotID) {
+			botID = configuredBotID
+			webhookURL = url
+			break
+		}
+	}
+
+	if botID == "" || webhookURL == "" {
+		return
+	}
+
+	p.API.LogDebug("meda-plugin: Message to bot detected",
+		"channel", channel.Name,
+		"user", post.UserId,
+		"message", post.Message,
+		"bot_id", botID,
+	)
+
+	jsonPayload, marshalErr := json.Marshal(post)
+	if marshalErr != nil {
+		p.API.LogError("meda-plugin: Failed to marshal JSON payload", "error", marshalErr.Error())
+		return
+	}
+
+	req, reqErr := http.NewRequest("POST", webhookURL, bytes.NewBuffer(jsonPayload))
+	if reqErr != nil {
+		p.API.LogError("meda-plugin: Failed to create HTTP request", "error", reqErr.Error())
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, doErr := client.Do(req)
+	if doErr != nil {
+		p.API.LogError("meda-plugin: Failed to make an HTTP request", "error", doErr.Error())
+		return
+	}
+	defer resp.Body.Close()
+}
+
 // ServeHTTP вызывается Mattermost для всех HTTP-запросов к плагину (/plugins/bot-button-webhook/...).
 // Сигнатура с *plugin.Context обязательна — без неё Mattermost не регистрирует метод как хук.
 func (p *BotButtonWebhookPlugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
