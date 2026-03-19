@@ -96,6 +96,12 @@ func (p *BotButtonWebhookPlugin) MessageHasBeenPosted(c *plugin.Context, post *m
 		return
 	}
 
+	p.API.LogDebug("meda-plugin: Start processing message to bot",
+		"channel", channel.Name,
+		"user", post.UserId,
+		"message", post.Message,
+	)
+
 	// Эвристика: в DM-канале имя канала содержит user_id участника.
 	// Определяем, какому боту написали, по списку bot_id из настроек.
 	var botID string
