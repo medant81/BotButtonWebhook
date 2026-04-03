@@ -56,6 +56,16 @@ curl -s -X POST "http://localhost:8065/api/v4/plugins/bot-button-webhook/enable"
   --header "Authorization: Bearer $TOKEN"
 ```
 
+## Кнопки в сообщениях: важный момент про `integration.url`
+
+При нажатии на кнопку **запрос на `integration.url` выполняет сам сервер Mattermost**, а не браузер пользователя. Поэтому в `integration.url` должен быть адрес, **доступный с той машины, где запущен Mattermost**:
+
+- Если Mattermost на одном сервере без Docker — используйте `http://localhost:8065/plugins/bot-button-webhook/actions/...` (порт 8065 — стандартный порт Mattermost).
+- Если Mattermost за Nginx на том же хосте — подойдёт `http://127.0.0.1/plugins/...` (порт 80) только если Nginx проксирует запросы к Mattermost.
+- Если Mattermost в Docker — с контейнера должен быть доступен хост (например `http://host.docker.internal:8065/...` или внутренний IP хоста и порт, на котором слушает Mattermost/Nginx).
+
+Если указать публичный URL вида `http://talk-test.vkusvill.ru/...`, сервер попытается обратиться к нему «снаружи» (по DNS). Часто это приводит к **таймауту** (dial tcp ... i/o timeout), если с сервера до этого адреса нет маршрута или порт закрыт файрволом. В таких случаях переключитесь на внутренний URL (localhost или внутренний хост/порт).
+
 ## Отправка сообщения с кнопками через API
 
 ```bash

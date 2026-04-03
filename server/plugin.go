@@ -230,6 +230,22 @@ type InteractiveMessagePayload struct {
 	} `json:"action"`
 }
 
+// contextFeedbackText возвращает текст для обновления поста из integration.context (поле feedback_message).
+func contextFeedbackText(ctx map[string]interface{}) (string, bool) {
+	if ctx == nil {
+		return "", false
+	}
+	raw, ok := ctx["feedback_message"]
+	if !ok {
+		return "", false
+	}
+	s, ok := raw.(string)
+	if !ok || strings.TrimSpace(s) == "" {
+		return "", false
+	}
+	return strings.TrimSpace(s), true
+}
+
 func (p *BotButtonWebhookPlugin) handleButtonClick(w http.ResponseWriter, r *http.Request) {
 
 	p.API.LogInfo("meda-plugin: === handleButtonClick called ===",
@@ -330,12 +346,16 @@ func (p *BotButtonWebhookPlugin) handleButtonClick(w http.ResponseWriter, r *htt
 
 	// Обновляем оригинальный пост: убираем кнопки и показываем кто и что выбрал.
 	// Это надёжнее ephemeral_text — визуально меняет пост для всех участников.
+	attachmentText := "✅ Действие выполнено: *" + actionId + "* — пользователь @" + payload.UserName
+	if custom, ok := contextFeedbackText(payload.Context); ok {
+		attachmentText = custom
+	}
 	response := map[string]interface{}{
 		"update": map[string]interface{}{
 			"props": map[string]interface{}{
 				"attachments": []map[string]interface{}{
 					{
-						"text": "✅ Действие выполнено: *" + actionId + "* — пользователь @" + payload.UserName,
+						"text": attachmentText,
 					},
 				},
 			},
